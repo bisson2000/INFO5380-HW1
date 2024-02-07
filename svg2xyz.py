@@ -4,9 +4,23 @@ Digital Fabrication HW1 - Convert SVG path data to XYZ coordinates for wire bend
 William J. Reid (wjr83) - 02/06/2024
 """
 
+import tkinter as tk
+from tkinter import filedialog
 import svgpathtools
 import csv
 import numpy as np
+
+def select_svg_file():
+    """
+    Prompt the user to select an SVG file via the file explorer.
+    
+    Returns:
+        str: Path to the selected SVG file.
+    """
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+    file_path = filedialog.askopenfilename(filetypes=[("SVG files", "*.svg")])
+    return file_path
 
 def svg_to_xyz(svg_file, output_file):
     """
@@ -19,9 +33,12 @@ def svg_to_xyz(svg_file, output_file):
     # Load SVG file and parse its path data
     paths, _ = svgpathtools.svg2paths(svg_file)
 
-    # Extract path coordinates
+    # Initialize an empty list to store the XYZ coordinates
     path_coordinates = []
+    
+    # Iterate through each path in the SVG file
     for path in paths:
+        # Iterate through each segment in the path
         for segment in path:
             # If the segment is a straight line
             if isinstance(segment, svgpathtools.Line):
@@ -89,14 +106,9 @@ def arc_to_points(arc, num_points=100):
     points = [center + radius * np.exp(1j * t) for t in theta]
     return points
 
-'''
-#TODO: Where should the wire bender machine start? 
-
-TODO: Should the points be "shifted" to start at some origin (per requirements of the machine)?
-'''
 def bezier_to_points(bezier, num_points=100):
     """
-    Generate points along a spline (Bezier curve) segment.
+    Generate points along a Bezier curve segment.
     
     Parameters:
         bezier (svgpathtools.CubicBezier or svgpathtools.QuadraticBezier): The Bezier curve segment.
@@ -111,7 +123,31 @@ def bezier_to_points(bezier, num_points=100):
     points = [bezier.point(t) for t in t_values]
     return points
 
-# Example usage
-svg_file = r"C:\Users\Windows\Documents\Cornell Tech\Spring 2024\INFO 5380 - Digital Fabrication\HW1\Git-Repository\INFO5380-HW1\svg_files\spline.svg"
-output_file = r"C:\Users\Windows\Documents\Cornell Tech\Spring 2024\INFO 5380 - Digital Fabrication\HW1\Git-Repository\INFO5380-HW1\output.csv"
-svg_to_xyz(svg_file, output_file)
+def main():
+    # Prompt user to select an SVG file
+    svg_file = select_svg_file()
+    if svg_file:
+        output_file = 'output.csv'
+        svg_to_xyz(svg_file, output_file)
+        print("Conversion completed. Output saved to output.csv")
+
+if __name__ == "__main__":
+    main()
+
+
+
+'''
+#TODO: Where should the wire bender machine start? 
+
+TODO: Should the points be "shifted" to start at some origin (per requirements of the machine)?
+
+TODO: If SVG contains unconnected objects, how does it tell the machine to cut the wire before proceeding with bending the next shapt?
+
+'''
+
+# How to use this script:
+
+# Provide path to the SVG file:
+# svg_file = r"C:\Users\Windows\Documents\Cornell Tech\Spring 2024\INFO 5380 - Digital Fabrication\HW1\Git-Repository\INFO5380-HW1\svg_files\spline.svg"
+# output_file = r"C:\Users\Windows\Documents\Cornell Tech\Spring 2024\INFO 5380 - Digital Fabrication\HW1\Git-Repository\INFO5380-HW1\output.csv"
+# svg_to_xyz(svg_file, output_file)
