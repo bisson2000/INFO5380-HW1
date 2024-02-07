@@ -90,12 +90,13 @@ def arc_to_points(arc, num_points=100):
     return points
 
 '''
-#TODO: Currently, the script can convert lines and arcs into xyz coordinates. 
-A next step would be to create a function that can handle (and detect) splines.
+#TODO: Where should the wire bender machine start? 
+
+TODO: Should the points be "shifted" to start at some origin (per requirements of the machine)?
 '''
 def bezier_to_points(bezier, num_points=100):
     """
-    Generate points along a Bezier curve segment.
+    Generate points along a spline (Bezier curve) segment.
     
     Parameters:
         bezier (svgpathtools.CubicBezier or svgpathtools.QuadraticBezier): The Bezier curve segment.
