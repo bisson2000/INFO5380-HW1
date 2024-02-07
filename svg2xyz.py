@@ -39,6 +39,24 @@ def svg_to_xyz(svg_file, output_file):
                     start = (points[i].real, points[i].imag, 0)
                     end = (points[i + 1].real, points[i + 1].imag, 0)
                     path_coordinates.extend([start, end])
+            # If the segment is a cubic Bezier curve
+            elif isinstance(segment, svgpathtools.CubicBezier):
+                # Extract points from the cubic Bezier segment
+                points = bezier_to_points(segment)
+                # Add points along the curve to the path coordinates
+                for i in range(len(points) - 1):
+                    start = (points[i].real, points[i].imag, 0)
+                    end = (points[i + 1].real, points[i + 1].imag, 0)
+                    path_coordinates.extend([start, end])
+            # If the segment is a quadratic Bezier curve
+            elif isinstance(segment, svgpathtools.QuadraticBezier):
+                # Extract points from the quadratic Bezier segment
+                points = bezier_to_points(segment)
+                # Add points along the curve to the path coordinates
+                for i in range(len(points) - 1):
+                    start = (points[i].real, points[i].imag, 0)
+                    end = (points[i + 1].real, points[i + 1].imag, 0)
+                    path_coordinates.extend([start, end])
 
     # Write XYZ coordinates to CSV file
     with open(output_file, 'w', newline='') as csvfile:
@@ -75,7 +93,24 @@ def arc_to_points(arc, num_points=100):
 #TODO: Currently, the script can convert lines and arcs into xyz coordinates. 
 A next step would be to create a function that can handle (and detect) splines.
 '''
+def bezier_to_points(bezier, num_points=100):
+    """
+    Generate points along a Bezier curve segment.
+    
+    Parameters:
+        bezier (svgpathtools.CubicBezier or svgpathtools.QuadraticBezier): The Bezier curve segment.
+        num_points (int): Number of points to generate.
+    
+    Returns:
+        list: List of complex points representing the Bezier curve.
+    """
+    # Generate equally spaced parameter values along the curve
+    t_values = np.linspace(0, 1, num_points)
+    # Evaluate the Bezier curve at each parameter value
+    points = [bezier.point(t) for t in t_values]
+    return points
+
 # Example usage
-svg_file = r"C:\Users\Windows\Documents\Cornell Tech\Spring 2024\INFO 5380 - Digital Fabrication\HW1\Git-Repository\INFO5380-HW1\svg_files\circle.svg"
+svg_file = r"C:\Users\Windows\Documents\Cornell Tech\Spring 2024\INFO 5380 - Digital Fabrication\HW1\Git-Repository\INFO5380-HW1\svg_files\spline.svg"
 output_file = r"C:\Users\Windows\Documents\Cornell Tech\Spring 2024\INFO 5380 - Digital Fabrication\HW1\Git-Repository\INFO5380-HW1\output.csv"
 svg_to_xyz(svg_file, output_file)
