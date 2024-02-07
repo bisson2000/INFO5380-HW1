@@ -137,12 +137,11 @@ if __name__ == "__main__":
 
 
 '''
-#TODO: Where should the wire bender machine start? 
+TODO: Where should the wire bender machine start? 
 
 TODO: Should the points be "shifted" to start at some origin (per requirements of the machine)?
 
-TODO: If SVG contains unconnected objects, how does it tell the machine to cut the wire before proceeding with bending the next shapt?
-
+TODO: If SVG contains unconnected objects, how does it tell the machine to cut the wire before proceeding with bending the next shape?
 '''
 
 # How to use this script:
