@@ -123,6 +123,25 @@ def bezier_to_points(bezier, num_points=100):
     points = [bezier.point(t) for t in t_values]
     return points
 
+
+
+#TODO: Paul → Function: Handle overlapping lines
+
+# Function: png to svg
+# TODO: Khushi → Function: png to svg --> digital png drawing to svg → coordinates
+
+# TODO: Harshini & William → png of hand-drawn shape to svg (computer vision techniques in between / edge detection, etc.) → coordinates
+
+'''
+Other TODO's:
+TODO: Backburner (more challenging): picture to png to svg
+TODO: Scale coordinates to produce shape of X size on the wire bender
+    If SVG contains unconnected objects, how does it tell the machine to cut the wire before proceeding with bending the next shape?
+    One potential approach: Ask the user to connect separated shapes or produce multiple output files (one for each shape/path detected).
+'''
+
+
+
 def main():
     # Prompt user to select an SVG file
     svg_file = select_svg_file()
@@ -136,12 +155,24 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
 '''
+OTHER TODO's 
+
 TODO: Where should the wire bender machine start? 
 
 TODO: Should the points be "shifted" to start at some origin (per requirements of the machine)?
 
 TODO: If SVG contains unconnected objects, how does it tell the machine to cut the wire before proceeding with bending the next shape?
+
+TODO: Rather than drawing letters, it would make more sense to type letters to wire bend.
+
+TODO: Beautiful polar coordinates functions?
+
+TODO: Convert a picture to an edge to a wireframe 
 '''
 
 # How to use this script:
