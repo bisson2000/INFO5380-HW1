@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Digital Fabrication HW1 - Convert SVG path data to XYZ coordinates for wire bending.
-William J. Reid (wjr83) - 02/06/2024
+Digital Fabrication HW1 - Convert image & SVG path data to XYZ coordinates for wire bending.
+William J. Reid (wjr83) - 02/13/2024
+Harshini Donepudi (hsd39) - 02/13/2024
 """
 
 import tkinter as tk
@@ -25,7 +26,7 @@ def select_file():
     """
     root = tk.Tk()
     root.withdraw()  # Hide the main window
-    file_path = filedialog.askopenfilename(filetypes=[("Select SVG files, PNG or JPG files", "*.svg;*.png;*.jpg")])
+    file_path = filedialog.askopenfilename(filetypes=[("Select an SVG, PNG or JPG file:", "*.svg;*.png;*.jpg")]) # Filter files to show only SVG, PNG, and JPG
     return file_path
 
 def svg_to_xyz(svg_file, output_file):
@@ -132,6 +133,15 @@ def bezier_to_points(bezier, num_points=100):
 
 # TODO: Harshini & William → png of hand-drawn shape to svg (computer vision techniques in between / edge detection, etc.) → coordinates
 def image2svg(image_path):
+    """
+    Convert Image file (PNG or JPG) to an SVG file by extracting edges and smoothening hand-drawn shape.
+    
+    Parameters:
+        image_path (str): Path to the input SVG file.
+    
+    Returns:
+        svg_output_path (str): path to newly generated SVG file.
+    """
     # Read the uploaded image
     image = cv2.imread(image_path)
 
