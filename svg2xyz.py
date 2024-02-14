@@ -9,8 +9,14 @@ from tkinter import filedialog
 import svgpathtools
 import csv
 import numpy as np
+from PIL import Image
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import svgwrite
+import os
 
-def select_svg_file():
+def select_file():
     """
     Prompt the user to select an SVG file via the file explorer.
     
@@ -19,7 +25,7 @@ def select_svg_file():
     """
     root = tk.Tk()
     root.withdraw()  # Hide the main window
-    file_path = filedialog.askopenfilename(filetypes=[("SVG files", "*.svg")])
+    file_path = filedialog.askopenfilename(filetypes=[("Select SVG files, PNG or JPG files", "*.svg;*.png;*.jpg")])
     return file_path
 
 def svg_to_xyz(svg_file, output_file):
@@ -124,13 +130,93 @@ def bezier_to_points(bezier, num_points=100):
     return points
 
 
+# TODO: Harshini & William → png of hand-drawn shape to svg (computer vision techniques in between / edge detection, etc.) → coordinates
+def image2svg(image_path):
+    # Read the uploaded image
+    image = cv2.imread(image_path)
+
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply Gaussian blur
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Detect edges using Canny edge detection
+    edges = cv2.Canny(blur, 50, 150)
+
+    # Dilate the edges to ensure connectivity and single-pixel width
+    kernel = np.ones((3, 3), np.uint8)
+    dilated_edges = cv2.dilate(edges, kernel, iterations=1)
+
+    # Finding contours
+    contours, _ = cv2.findContours(dilated_edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Find the largest contour
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # Approximate the largest contour with a simpler polygonal curve
+    approx_largest_contour = cv2.approxPolyDP(largest_contour, 0.01 * cv2.arcLength(largest_contour, True), True) # Will create more lines than splines
+
+    # Approximate the largest contour with a spline-like polygonal curve
+    # epsilon = 0.005 * cv2.arcLength(largest_contour, True) # Adjust epsilon for spline-like approximation (tested values that are too small: 0.00001. 0.00025, 0.0005)
+    # approx_largest_contour = cv2.approxPolyDP(largest_contour, epsilon, True)
+
+    # Convert the largest contour to SVG path
+    path_data = "M"
+    for point in approx_largest_contour.squeeze():
+        path_data += f"{point[0]},{point[1]} "
+    path_data += "Z"
+    
+    # Get the filename without the extension
+    file_name_without_extension = os.path.splitext(os.path.basename(image_path))[0]
+
+    # Create a folder named "svg_files" if it doesn't exist
+    if not os.path.exists("svg_files"):
+        os.makedirs("svg_files")
+
+    # Create an SVG file path based on the name of the original image
+    file_name_without_extension = os.path.splitext(os.path.basename(image_path))[0]
+    svg_output_path = f'svg_files/{file_name_without_extension}.svg' 
+
+    # Create an SVG file and draw the largest contour as a path
+    dwg = svgwrite.Drawing(svg_output_path, size=(image.shape[1], image.shape[0]))
+    dwg.add(dwg.path(d=path_data, fill="none", stroke="black", stroke_width=1))
+    dwg.save() # Save newly create svg file to the svg_file folder
+
+    print("Conversion to SVG completed. New SVG saved to:", svg_output_path)
+    return svg_output_path
+  
+    # For Troubleshooting
+    #     # Display images
+    #   fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    #   # Original image
+    #   axes[0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    #   axes[0].set_title("Original Image")
+    #   axes[0].axis('off')
+
+    #   # Dilated edges
+    #   axes[1].imshow(dilated_edges, cmap='gray')
+    #   axes[1].set_title("Dilated Edges")
+    #   axes[1].axis('off')
+
+    #   # Largest contour
+    #   largest_contour_image = np.zeros_like(gray)
+    #   cv2.drawContours(largest_contour_image, [approx_largest_contour], -1, (255), thickness=cv2.FILLED)
+    #   axes[2].imshow(largest_contour_image, cmap='gray')
+    #   axes[2].set_title("Largest Contour, Smoothed Edges")
+    #   axes[2].axis('off')
+
+    #   # Display the cleaned SVG
+    #   # display(SVG(dwg.tostring())) # Very large plot compared to png images displayed
+
+    #   plt.show()
+  # End of TODO
+
 
 #TODO: Paul → Function: Handle overlapping lines
 
-# Function: png to svg
-# TODO: Khushi → Function: png to svg --> digital png drawing to svg → coordinates
 
-# TODO: Harshini & William → png of hand-drawn shape to svg (computer vision techniques in between / edge detection, etc.) → coordinates
 
 '''
 Other TODO's:
@@ -140,22 +226,26 @@ TODO: Scale coordinates to produce shape of X size on the wire bender
     One potential approach: Ask the user to connect separated shapes or produce multiple output files (one for each shape/path detected).
 '''
 
-
-
 def main():
-    # Prompt user to select an SVG file
-    svg_file = select_svg_file()
-    if svg_file:
+    # Prompt user to select a file
+    file_path = select_file()
+    if file_path:
         output_file = 'output.csv'
-        svg_to_xyz(svg_file, output_file)
-        print("Conversion completed. Output saved to output.csv")
-
+        # If SVG, then convert to coordinates
+        if file_path.lower().endswith('.svg'):
+            svg_to_xyz(file_path, output_file)
+            print("Conversion from SVG file to XYZ coordinates completed.") 
+            print("Output saved to output.csv")
+        # If PNG or JPG, first convert to SVG, then to coordinates
+        else:
+            print("The selected file is not an SVG file, converting to SVG...")
+            path_svg = image2svg(file_path) # saves image file as svg
+            svg_to_xyz(path_svg, output_file) # pass the new svg file to image2svg function to convert to coordinates
+            print("Conversion to XYZ coordinates completed.") 
+            print("Output saved to output.csv")
+            
 if __name__ == "__main__":
     main()
-
-
-
-
 
 
 
