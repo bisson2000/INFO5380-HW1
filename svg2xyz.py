@@ -251,9 +251,14 @@ def main():
             print("The selected file is not an SVG file, converting to SVG...")
             path_svg = image2svg(file_path) # saves image file as svg
             svg_to_xyz(path_svg, output_file) # pass the new svg file to image2svg function to convert to coordinates
+            # TODO: May need to center / normalize the coordinates to start from zero (0). 
+            # TODO: Also, need to remove the duplicate coordinates (each coordinate is repeated twice) 
+            
             print("Conversion to XYZ coordinates completed.") 
             print("Output saved to output.csv")
             
+        # TODO: Create a method so the coordinates can be imported with ease into Tobi's Fusion 360 Plug-in 
+        
 if __name__ == "__main__":
     main()
 
