@@ -84,12 +84,12 @@ def svg_to_xyz(svg_file, output_file):
                     path_coordinates.extend([start, end])
 
     path_coordinates = remove_duplicates_coords(path_coordinates)
-    
-    path_coordinates = clear_points_intersections(path_coordinates, float(160))
+    path_coordinates = scale_coords(path_coordinates)
+    path_coordinates = set_origin_to_zero(path_coordinates)
+    path_coordinates = clear_points_intersections(path_coordinates)
 
     # Write XYZ coordinates to CSV file
     write_coordinates_to_file(path_coordinates, output_file)
-    
 
 
 def write_coordinates_to_file(path_coordinates, output_file):
@@ -112,7 +112,7 @@ def remove_duplicates_coords(points: list):
     """
 
     if len(points) <= 1:
-        return points
+        return points.copy()
 
     res = [points[0]]
     for i in range(1, len(points)):
@@ -122,7 +122,84 @@ def remove_duplicates_coords(points: list):
     return res
 
 
-def clear_points_intersections(points: list, clear_distance: float):
+def scale_coords(points: list, max_size=100):
+    """
+    Scales the coordinates to fit the max_size.
+    
+    Parameters:
+        points (List[List[int]]): The XYZ coordinates.
+        max_size: The maximum size allowed
+    
+    Returns:
+        list: List of points scaled.
+    """
+    if len(points) <= 1:
+        return points.copy()
+    
+    maxX = points[0][0]
+    maxY = points[0][1]
+    minX = points[0][0]
+    minY = points[0][1]
+    for point in points:
+        maxX = max(maxX, point[0])
+        maxY = max(maxY, point[1])
+        minX = min(minX, point[0])
+        minY = min(minY, point[1])
+    
+    width = maxX - minX
+    height = maxY - minY
+    original_centerX = (maxX + minX) / 2
+    original_centerY = (maxY + minY) / 2
+
+    scaleFactor = 1
+    if width > height:
+        scaleFactor = max_size / width
+    else:
+        scaleFactor = max_size / height
+
+    new_centerX = max_size / 2
+    new_centerY = max_size / 2
+
+    new_points = []
+    for point in points:
+        new_pointX = new_centerX + scaleFactor * (point[0] - original_centerX)
+        new_pointY = new_centerY + scaleFactor * (point[1] - original_centerY)
+        new_pointZ = point[2]
+
+        new_points.append([new_pointX, new_pointY, new_pointZ])
+
+    return new_points
+
+
+def set_origin_to_zero(points: list):
+    """
+    Offsets all points to move the origin to 0
+    
+    Parameters:
+        points (List[List[int]]): The XYZ coordinates.
+    
+    Returns:
+        list: List of points scaled.
+    """
+
+    if len(points) == 0:
+        return points.copy()
+
+    offsetX = points[0][0]
+    offsetY = points[0][1]
+
+    new_points = []
+    for point in points:
+        new_pointX = point[0] - offsetX
+        new_pointY = point[1] - offsetY
+        new_pointZ = point[2]
+
+        new_points.append([new_pointX, new_pointY, new_pointZ])
+
+    return new_points
+
+
+def clear_points_intersections(points: list, clear_distance: float = 1.6):
     """
     Clears the intersections.
 
@@ -145,6 +222,7 @@ def clear_points_intersections(points: list, clear_distance: float):
     
     def distance_point_to_line(line_start, line_end, point):
         """
+        Algorithm inspired from
         https://www.geeksforgeeks.org/minimum-distance-from-a-point-to-the-line-segment-using-vectors/
         """
         
@@ -171,8 +249,33 @@ def clear_points_intersections(points: list, clear_distance: float):
         line1_vector = np.array([line1_end[0] - line1_start[0], line1_end[1] - line1_start[1]])
         line2_vector = np.array([line2_end[0] - line2_start[0], line2_end[1] - line2_start[1]])
         return np.dot(line1_vector, line2_vector) / (np.linalg.norm(line1_vector) * np.linalg.norm(line2_vector))
+    
+    def segments_intersect(line1_start, line1_end, line2_start, line2_end):
+        """
+        Algorithm inspired from
+        https://paulbourke.net/geometry/pointlineplane/example.cpp
+        """
+        denom = ((line2_end[1] - line2_start[1])*(line1_end[0] - line1_start[0])) - \
+                      ((line2_end[0] - line2_start[0])*(line1_end[1] - line1_start[1]))
 
-    def lines_intersect(line1_start, line1_end, line2_start, line2_end):
+        num_a = ((line2_end[0] - line2_start[0])*(line1_start[1] - line2_start[1])) - \
+                       ((line2_end[1] - line2_start[1])*(line1_start[0] - line2_start[0]))
+
+        num_b = ((line1_end[0] - line1_start[0])*(line1_start[1] - line2_start[1])) -\
+                       ((line1_end[1] - line1_start[1])*(line1_start[0] - line2_start[0]))
+
+        if denom == 0:
+            return False
+
+        ua = num_a / denom
+        ub = num_b / denom
+
+        if 0 <= ua <= 1 and 0 <= ub <= 1:
+            return True
+
+        return False
+
+    def lines_overlap(line1_start, line1_end, line2_start, line2_end):
         # Exception for connected points
         # Make sure the current end point is not too close to the previous start point
         # and that it is pointing the the same direction
@@ -180,6 +283,10 @@ def clear_points_intersections(points: list, clear_distance: float):
             cosine = lines_cosine(line1_start, line1_end, line2_start, line2_end)
             return math.dist(line1_start, line2_end) <= clear_distance and cosine < 0
         
+        # are the segments intersecting
+        if segments_intersect(line1_start, line1_end, line2_start, line2_end):
+            return True
+
         # min distance between 2 segments
         distance = distance_point_to_line(line1_start, line1_end, line2_start)
         distance = min(distance_point_to_line(line1_start, line1_end, line2_end), distance)
@@ -209,8 +316,8 @@ def clear_points_intersections(points: list, clear_distance: float):
                 skip_last_too_close = False
 
             # find intersections
-            if lines_intersect(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d):
-                current_height += clear_distance
+            if lines_overlap(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d):
+                current_height -= clear_distance
                 previous_search_end = i
                 new_points[i][2] = current_height
                 break
