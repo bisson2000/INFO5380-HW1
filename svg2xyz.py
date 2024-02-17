@@ -199,6 +199,7 @@ def set_origin_to_zero(points: list):
     return new_points
 
 
+#TODO: Paul → Function: Handle overlapping lines
 def clear_points_intersections(points: list, clear_distance: float = 1.6):
     """
     Clears the intersections.
@@ -463,7 +464,7 @@ def image2svg(image_path):
   # End of TODO
 
 
-#TODO: Paul → Function: Handle overlapping lines
+
 
 
 
@@ -490,8 +491,6 @@ def main():
             print("The selected file is not an SVG file, converting to SVG...")
             path_svg = image2svg(file_path) # saves image file as svg
             svg_to_xyz(path_svg, output_file) # pass the new svg file to image2svg function to convert to coordinates
-            # TODO: May need to center / normalize the coordinates to start from zero (0). 
-            # TODO: Also, need to remove the duplicate coordinates (each coordinate is repeated twice) 
             
             print("Conversion to XYZ coordinates completed.") 
             print("Output saved to output.csv")
