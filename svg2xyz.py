@@ -84,13 +84,11 @@ def svg_to_xyz(svg_file, output_file):
                     path_coordinates.extend([start, end])
 
     path_coordinates = remove_duplicates_coords(path_coordinates)
-    write_coordinates_to_file(path_coordinates, "output_original.csv")
     
     path_coordinates = clear_points_intersections(path_coordinates, float(160))
-    write_coordinates_to_file(path_coordinates, "output_new.csv")
 
     # Write XYZ coordinates to CSV file
-    #write_coordinates_to_file(path_coordinates, output_file)
+    write_coordinates_to_file(path_coordinates, output_file)
     
 
 
@@ -169,17 +167,17 @@ def clear_points_intersections(points: list, clear_distance: float):
         mod = math.sqrt(x1 * x1 + y1 * y1)
         return abs(x1 * y2 - y1 * x2) / mod
 
-
+    def lines_cosine(line1_start, line1_end, line2_start, line2_end):
+        line1_vector = np.array([line1_end[0] - line1_start[0], line1_end[1] - line1_start[1]])
+        line2_vector = np.array([line2_end[0] - line2_start[0], line2_end[1] - line2_start[1]])
+        return np.dot(line1_vector, line2_vector) / (np.linalg.norm(line1_vector) * np.linalg.norm(line2_vector))
 
     def lines_intersect(line1_start, line1_end, line2_start, line2_end):
         # Exception for connected points
         # Make sure the current end point is not too close to the previous start point
         # and that it is pointing the the same direction
         if np.array_equal(line1_end, line2_start):
-            line1_vector = np.array([line1_end[0] - line1_start[0], line1_end[1] - line1_start[1]])
-            line2_vector = np.array([line2_end[0] - line2_start[0], line2_end[1] - line2_start[1]])
-            cosine = np.dot(line1_vector, line2_vector) / (np.linalg.norm(line1_vector) * np.linalg.norm(line2_vector))
-
+            cosine = lines_cosine(line1_start, line1_end, line2_start, line2_end)
             return math.dist(line1_start, line2_end) <= clear_distance and cosine < 0
         
         # min distance between 2 segments
@@ -203,12 +201,12 @@ def clear_points_intersections(points: list, clear_distance: float):
             point_j_1_2d = [points[j - 1][0], points[j - 1][1]]
             point_j_2d = [points[j][0], points[j][1]]
 
-            # the points are too close to be analyzed
-            if i != j:
-                if skip_last_too_close and math.dist(point_j_2d, point_i_2d) <= clear_distance:
-                    continue
-                else:
-                    skip_last_too_close = False
+            # the previous points all go in the same direction,
+            # therefore no intersection
+            if skip_last_too_close and lines_cosine(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d) >= 0:
+                continue
+            else:
+                skip_last_too_close = False
 
             # find intersections
             if lines_intersect(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d):
