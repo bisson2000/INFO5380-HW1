@@ -303,19 +303,20 @@ def clear_points_intersections(points: list, clear_distance: float = 1.6):
         point_i_2d = [points[i][0], points[i][1]]
         point_i_1_2d = [points[i + 1][0], points[i + 1][1]]
 
-        skip_last_too_close = True
+        is_previous_same_direction = True
         for j in range(i, previous_search_end, -1):
             point_j_1_2d = [points[j - 1][0], points[j - 1][1]]
             point_j_2d = [points[j][0], points[j][1]]
 
             # the previous points all go in the same direction,
             # therefore no intersection
-            if skip_last_too_close and lines_cosine(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d) >= 0:
+            if is_previous_same_direction and lines_cosine(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d) >= 0:
                 continue
             else:
-                skip_last_too_close = False
+                is_previous_same_direction = False
 
-            # find intersections
+            # find intersection
+            # If there is one, break here
             if lines_overlap(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d):
                 current_height -= clear_distance
                 previous_search_end = i
