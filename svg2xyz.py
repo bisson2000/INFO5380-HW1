@@ -220,7 +220,7 @@ def clear_points_intersections(points: list, clear_distance: float):
     return new_points
 
 
-def arc_to_points(arc, num_points=10):
+def arc_to_points(arc, num_points=100):
     """
     Generate points along an arc segment.
     
@@ -244,7 +244,7 @@ def arc_to_points(arc, num_points=10):
     points = [center + radius * np.exp(1j * t) for t in theta]
     return points
 
-def bezier_to_points(bezier, num_points=10):
+def bezier_to_points(bezier, num_points=100):
     """
     Generate points along a Bezier curve segment.
     
