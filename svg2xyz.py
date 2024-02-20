@@ -27,7 +27,7 @@ def select_file():
     """
     root = tk.Tk()
     root.withdraw()  # Hide the main window
-    file_path = filedialog.askopenfilename(filetypes=[("Select an SVG, PNG or JPG file:", "*.svg;*.png;*.jpg")]) # Filter files to show only SVG, PNG, and JPG
+    file_path = filedialog.askopenfilename(filetypes=[("Select an SVG, PNG or JPG file:", "*.svg;*.png;*.jpg;*.jpeg")]) # Filter files to show only SVG, PNG, and JPG
     return file_path
 
 def svg_to_xyz(svg_file, output_file):
