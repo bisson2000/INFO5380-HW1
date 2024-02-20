@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import svgwrite
 import os
 import math
+import potrace
 
 def select_file():
     """
@@ -463,10 +464,49 @@ def image2svg(image_path):
     #   plt.show()
   # End of TODO
 
+def heic_to_png(heic_path, png_path):
+    try:
+        # Open the HEIC image
+        heic_image = Image.open(heic_path)
 
+        # Save the image as PNG
+        heic_image.save(png_path, format="PNG")
+        print(f"Conversion successful: {heic_path} -> {png_path}")
 
+    except Exception as e:
+        print(f"Error during conversion: {e}")
 
+def convert_image_to_svg(file_path):
+    """
+    Convert an image to SVG coordinates using Potrace.
 
+    Parameters:
+        image (Image.Image): PIL Image object.
+
+    Returns:
+        str: SVG data representing the traced image.
+    """
+    # Convert PIL Image to numpy array
+    image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+
+    # Convert the image to a binary (black and white) image
+    _, img_array = cv2.threshold(image, 128, 255, cv2.THRESH_BINARY)
+                                 
+    bitmap = potrace.Bitmap(img_array)
+
+    # Trace the bitmap to a path
+    path = bitmap.trace()
+
+    # Simplify the path and remove overlapping lines
+    path = path.simplify_tolerant(1.0)
+
+    # Scale each line segment to 10cm
+    path = path.scale(10.0 / bitmap.width)
+
+    # Create SVG from the path
+    svg_data = path.to_svg()
+
+    return svg_data
 
 '''
 Other TODO's:
@@ -486,6 +526,12 @@ def main():
             svg_to_xyz(file_path, output_file)
             print("Conversion from SVG file to XYZ coordinates completed.") 
             print("Output saved to ", output_file)
+        if file_path.lower().endswith('.heic'):
+            png_file_path = heic_to_png(file_path)
+            path_svg = image2svg(png_file_path) # saves image file as svg
+            svg_to_xyz(path_svg, output_file)
+            print("Conversion to XYZ coordinates completed.") 
+            print("Output saved to output.csv")
         # If PNG or JPG, first convert to SVG, then to coordinates
         else:
             print("The selected file is not an SVG file, converting to SVG...")
