@@ -16,6 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import svgwrite
 import os
+import math
 
 def select_file():
     """
@@ -82,12 +83,251 @@ def svg_to_xyz(svg_file, output_file):
                     end = (points[i + 1].real, points[i + 1].imag, 0)
                     path_coordinates.extend([start, end])
 
+    path_coordinates = remove_duplicates_coords(path_coordinates)
+    path_coordinates = scale_coords(path_coordinates)
+    path_coordinates = set_origin_to_zero(path_coordinates)
+    path_coordinates = clear_points_intersections(path_coordinates)
+
     # Write XYZ coordinates to CSV file
+    write_coordinates_to_file(path_coordinates, output_file)
+
+
+def write_coordinates_to_file(path_coordinates, output_file):
     with open(output_file, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])
         for point in path_coordinates:
             writer.writerow([point[0], point[1], point[2]])
+
+
+def remove_duplicates_coords(points: list):
+    """
+    Clears duplicates.
+    
+    Parameters:
+        points (List[List[int]]): The XYZ coordinates.
+    
+    Returns:
+        list: List of points without duplicates.
+    """
+
+    if len(points) <= 1:
+        return points.copy()
+
+    res = [points[0]]
+    for i in range(1, len(points)):
+        if not np.array_equal(res[-1], points[i]):
+            res.append(points[i])
+    
+    return res
+
+
+def scale_coords(points: list, max_size=100):
+    """
+    Scales the coordinates to fit the max_size.
+    
+    Parameters:
+        points (List[List[int]]): The XYZ coordinates.
+        max_size: The maximum size allowed
+    
+    Returns:
+        list: List of points scaled.
+    """
+    if len(points) <= 1:
+        return points.copy()
+    
+    maxX = points[0][0]
+    maxY = points[0][1]
+    minX = points[0][0]
+    minY = points[0][1]
+    for point in points:
+        maxX = max(maxX, point[0])
+        maxY = max(maxY, point[1])
+        minX = min(minX, point[0])
+        minY = min(minY, point[1])
+    
+    width = maxX - minX
+    height = maxY - minY
+    original_centerX = (maxX + minX) / 2
+    original_centerY = (maxY + minY) / 2
+
+    scaleFactor = 1
+    if width > height:
+        scaleFactor = max_size / width
+    else:
+        scaleFactor = max_size / height
+
+    new_centerX = max_size / 2
+    new_centerY = max_size / 2
+
+    new_points = []
+    for point in points:
+        new_pointX = new_centerX + scaleFactor * (point[0] - original_centerX)
+        new_pointY = new_centerY + scaleFactor * (point[1] - original_centerY)
+        new_pointZ = point[2]
+
+        new_points.append([new_pointX, new_pointY, new_pointZ])
+
+    return new_points
+
+
+def set_origin_to_zero(points: list):
+    """
+    Offsets all points to move the origin to 0
+    
+    Parameters:
+        points (List[List[int]]): The XYZ coordinates.
+    
+    Returns:
+        list: List of points scaled.
+    """
+
+    if len(points) == 0:
+        return points.copy()
+
+    offsetX = points[0][0]
+    offsetY = points[0][1]
+
+    new_points = []
+    for point in points:
+        new_pointX = point[0] - offsetX
+        new_pointY = point[1] - offsetY
+        new_pointZ = point[2]
+
+        new_points.append([new_pointX, new_pointY, new_pointZ])
+
+    return new_points
+
+
+#TODO: Paul → Function: Handle overlapping lines
+def clear_points_intersections(points: list, clear_distance: float = 1.6):
+    """
+    Clears the intersections.
+
+    Strategy: 
+        Intersecting points will be lowered.
+        In other words, the previous points will appear as "Higher" than the
+        next points who were intersecting.
+        With this strategy, it will always be safe to go lower
+    
+    Parameters:
+        points (List[List[int]]): The XYZ coordinates.
+        clear_distance (float): The minimum distance allowed.
+    
+    Returns:
+        list: List of points modified to clear the distance.
+    """
+
+    if len(points) <= 2:
+        return points
+    
+    def distance_point_to_line(line_start, line_end, point):
+        """
+        Algorithm inspired from
+        https://www.geeksforgeeks.org/minimum-distance-from-a-point-to-the-line-segment-using-vectors/
+        """
+        
+        line_vector = np.array([line_end[0] - line_start[0], line_end[1] - line_start[1]])
+        end_point_vector = np.array([point[0] - line_end[0], point[1] - line_end[1]])
+        start_point_vector = np.array([point[0] - line_start[0], point[1] - line_start[1]])
+
+        line_end_dot = np.dot(line_vector, end_point_vector)
+        line_start_dot = np.dot(line_vector, start_point_vector)
+
+        if line_end_dot > 0:
+            return np.sqrt(end_point_vector.dot(end_point_vector))
+        if line_start_dot < 0:
+            return np.sqrt(start_point_vector.dot(start_point_vector))
+
+        x1 = line_vector[0]
+        y1 = line_vector[1]
+        x2 = start_point_vector[0]
+        y2 = start_point_vector[1]
+        mod = math.sqrt(x1 * x1 + y1 * y1)
+        return abs(x1 * y2 - y1 * x2) / mod
+
+    def lines_cosine(line1_start, line1_end, line2_start, line2_end):
+        line1_vector = np.array([line1_end[0] - line1_start[0], line1_end[1] - line1_start[1]])
+        line2_vector = np.array([line2_end[0] - line2_start[0], line2_end[1] - line2_start[1]])
+        return np.dot(line1_vector, line2_vector) / (np.linalg.norm(line1_vector) * np.linalg.norm(line2_vector))
+    
+    def segments_intersect(line1_start, line1_end, line2_start, line2_end):
+        """
+        Algorithm inspired from
+        https://paulbourke.net/geometry/pointlineplane/example.cpp
+        """
+        denom = ((line2_end[1] - line2_start[1])*(line1_end[0] - line1_start[0])) - \
+                      ((line2_end[0] - line2_start[0])*(line1_end[1] - line1_start[1]))
+
+        num_a = ((line2_end[0] - line2_start[0])*(line1_start[1] - line2_start[1])) - \
+                       ((line2_end[1] - line2_start[1])*(line1_start[0] - line2_start[0]))
+
+        num_b = ((line1_end[0] - line1_start[0])*(line1_start[1] - line2_start[1])) -\
+                       ((line1_end[1] - line1_start[1])*(line1_start[0] - line2_start[0]))
+
+        if denom == 0:
+            return False
+
+        ua = num_a / denom
+        ub = num_b / denom
+
+        if 0 <= ua <= 1 and 0 <= ub <= 1:
+            return True
+
+        return False
+
+    def lines_overlap(line1_start, line1_end, line2_start, line2_end):
+        # Exception for connected points
+        # Make sure the current end point is not too close to the previous start point
+        # and that it is pointing the the same direction
+        if np.array_equal(line1_end, line2_start):
+            cosine = lines_cosine(line1_start, line1_end, line2_start, line2_end)
+            return math.dist(line1_start, line2_end) <= clear_distance and cosine < 0
+        
+        # are the segments intersecting
+        if segments_intersect(line1_start, line1_end, line2_start, line2_end):
+            return True
+
+        # min distance between 2 segments
+        distance = distance_point_to_line(line1_start, line1_end, line2_start)
+        distance = min(distance_point_to_line(line1_start, line1_end, line2_end), distance)
+        distance = min(distance_point_to_line(line2_start, line2_end, line1_start), distance)
+        distance = min(distance_point_to_line(line2_start, line2_end, line1_end), distance)
+
+        return distance <= clear_distance
+
+    current_height: float = 0
+    previous_search_end = 0
+    new_points = [[points[0][0], points[0][1], current_height]]
+
+    for i in range(0, len(points) - 1):
+        point_i_2d = [points[i][0], points[i][1]]
+        point_i_1_2d = [points[i + 1][0], points[i + 1][1]]
+
+        is_previous_same_direction = True
+        for j in range(i, previous_search_end, -1):
+            point_j_1_2d = [points[j - 1][0], points[j - 1][1]]
+            point_j_2d = [points[j][0], points[j][1]]
+
+            # the previous points all go in the same direction,
+            # therefore no intersection
+            if is_previous_same_direction and lines_cosine(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d) >= 0:
+                continue
+            else:
+                is_previous_same_direction = False
+
+            # find intersection
+            # If there is one, break here
+            if lines_overlap(point_j_1_2d, point_j_2d, point_i_2d, point_i_1_2d):
+                current_height -= clear_distance
+                previous_search_end = i
+                new_points[i][2] = current_height
+                break
+
+        new_points.append([points[i + 1][0], points[i + 1][1], current_height])
+
+    return new_points
+
 
 def arc_to_points(arc, num_points=100):
     """
@@ -224,7 +464,7 @@ def image2svg(image_path):
   # End of TODO
 
 
-#TODO: Paul → Function: Handle overlapping lines
+
 
 
 
@@ -245,14 +485,12 @@ def main():
         if file_path.lower().endswith('.svg'):
             svg_to_xyz(file_path, output_file)
             print("Conversion from SVG file to XYZ coordinates completed.") 
-            print("Output saved to output.csv")
+            print("Output saved to ", output_file)
         # If PNG or JPG, first convert to SVG, then to coordinates
         else:
             print("The selected file is not an SVG file, converting to SVG...")
             path_svg = image2svg(file_path) # saves image file as svg
             svg_to_xyz(path_svg, output_file) # pass the new svg file to image2svg function to convert to coordinates
-            # TODO: May need to center / normalize the coordinates to start from zero (0). 
-            # TODO: Also, need to remove the duplicate coordinates (each coordinate is repeated twice) 
             
             print("Conversion to XYZ coordinates completed.") 
             print("Output saved to output.csv")
