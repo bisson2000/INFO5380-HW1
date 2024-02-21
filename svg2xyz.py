@@ -494,7 +494,12 @@ def main():
     # Prompt user to select a file
     file_path = select_file()
     if file_path:
-        output_file = 'output.csv'
+        file_name_without_extension = os.path.splitext(os.path.basename(file_path))[0]
+        output_folder = "output_coordinates"
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        output_file = os.path.join(output_folder, f"{file_name_without_extension}.csv")
+        
         # If SVG, then convert to coordinates
         if file_path.lower().endswith('.svg'):
             svg_to_xyz(file_path, output_file)
