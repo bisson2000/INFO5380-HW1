@@ -275,6 +275,9 @@ def clear_points_intersections(points: list, clear_distance: float = 1.6):
             return True
 
         return False
+    
+    def get_euclidian_dist(p, q):
+        return math.sqrt(sum((px - qx) ** 2.0 for px, qx in zip(p, q)))
 
     def lines_overlap(line1_start, line1_end, line2_start, line2_end):
         # Exception for connected points
@@ -282,7 +285,7 @@ def clear_points_intersections(points: list, clear_distance: float = 1.6):
         # and that it is pointing the the same direction
         if np.array_equal(line1_end, line2_start):
             cosine = lines_cosine(line1_start, line1_end, line2_start, line2_end)
-            return math.dist(line1_start, line2_end) <= clear_distance and cosine < 0
+            return get_euclidian_dist(line1_start, line2_end) <= clear_distance and cosine < 0
         
         # are the segments intersecting
         if segments_intersect(line1_start, line1_end, line2_start, line2_end):
