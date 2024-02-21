@@ -27,7 +27,7 @@ def select_file():
     """
     root = tk.Tk()
     root.withdraw()  # Hide the main window
-    file_path = filedialog.askopenfilename(filetypes=[("Select an SVG, PNG or JPG file:", "*.svg;*.png;*.jpg")]) # Filter files to show only SVG, PNG, and JPG
+    file_path = filedialog.askopenfilename(filetypes=[("Select an SVG, PNG or JPG file:", "*.svg;*.png;*.jpg;*.jpeg")]) # Filter files to show only SVG, PNG, and JPG
     return file_path
 
 def svg_to_xyz(svg_file, output_file):
@@ -394,6 +394,17 @@ def image2svg(image_path):
     # Apply Gaussian blur
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
+    # Adaptive thresholding
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+    noise_reduced = cv2.medianBlur(blur, 5)
+
+    # Background removal (approximate, assuming a clear foreground object)
+    contours, _ = cv2.findContours(noise_reduced, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    largest_contour = max(contours, key=cv2.contourArea)
+    mask = np.zeros_like(noise_reduced)
+    cv2.drawContours(mask, [largest_contour], -1, 255, -1)
+    background_removed = cv2.bitwise_and(thresh, thresh, mask=mask)
+    
     # Detect edges using Canny edge detection
     edges = cv2.Canny(blur, 50, 150)
 
@@ -411,8 +422,8 @@ def image2svg(image_path):
     approx_largest_contour = cv2.approxPolyDP(largest_contour, 0.01 * cv2.arcLength(largest_contour, True), True) # Will create more lines than splines
 
     # Approximate the largest contour with a spline-like polygonal curve
-    # epsilon = 0.005 * cv2.arcLength(largest_contour, True) # Adjust epsilon for spline-like approximation (tested values that are too small: 0.00001. 0.00025, 0.0005)
-    # approx_largest_contour = cv2.approxPolyDP(largest_contour, epsilon, True)
+    epsilon = 0.0015 * cv2.arcLength(largest_contour, True) # Adjust epsilon for spline-like approximation (tested values that are too small: 0.00001. 0.00025, 0.0005)
+    approx_largest_contour = cv2.approxPolyDP(largest_contour, epsilon, True)
 
     # Convert the largest contour to SVG path
     path_data = "M"
