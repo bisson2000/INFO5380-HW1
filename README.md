@@ -24,7 +24,7 @@ Python version >= 3.8
 2. Activate the virtual environment with
     1. Windows: `source venv/Scripts/activate`
     2. MacOS/Linux: `source venv/bin/activate`
-3. Install the requirement with `pip install requirements.txt`
+3. Install the requirement with `python -m pip install -r requirements.txt`
 
 ### Using the program
 
